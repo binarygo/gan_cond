@@ -1,37 +1,43 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.datasets import mnist
 
 import dataset_util
 
 
-class DatasetFactory(object):
+IMAGE_KEY = 'image'
+LABEL_KEY = 'label'
+
+
+class Dataset(dataset_util.DatasetBase):
     
     def __init__(self, images_path, labels_path):
-        self._images_path = images_path
-        self._labels_path = labels_path
+        with open(images_path) as f:
+            images = mnist.extract_images(f).astype(np.float32) / 255.0
+        with open(labels_path) as f:
+            labels = mnist.extract_labels(f).astype(np.int32)
         
-        with open(self._images_path) as f:
-            self._images = mnist.extract_images(f)
-        with open(self._labels_path) as f:
-            self._labels = mnist.extract_labels(f)
-        
-        self._images_placeholder = tf.placeholder(
-            tf.uint8, shape=self._images.shape)
-        self._labels_placeholder = tf.placeholder(
-            tf.uint8, shape=self._labels.shape)
+        images_placeholder = tf.placeholder(
+            images.dtype, shape=images.shape)
+        labels_placeholder = tf.placeholder(
+            labels.dtype, shape=labels.shape)
 
-        self._feed_dict = {
-            self._images_placeholder: self._images,
-            self._labels_placeholder: self._labels
+        images_raw_dataset = tf.contrib.data.Dataset.from_tensor_slices(
+            images_placeholder)
+        labels_raw_dataset = tf.contrib.data.Dataset.from_tensor_slices(
+            labels_placeholder)
+
+        feed_dict = {
+            images_placeholder: images,
+            labels_placeholder: labels
         }
-            
-    def make_dataset(self):
-        images_dataset = tf.contrib.data.Dataset.from_tensor_slices(
-            self._images_placeholder)
-        labels_dataset = tf.contrib.data.Dataset.from_tensor_slices(
-            self._labels_placeholder)
-        return tf.contrib.data.Dataset.zip((images_dataset, labels_dataset))
-    
-    @property
-    def feed_dict(self):
-        return self._feed_dict
+
+        raw = tf.contrib.data.Dataset.zip(
+            {
+                IMAGE_KEY: images_raw_dataset,
+                LABEL_KEY: labels_raw_dataset
+            })
+        super(Dataset, self).__init__(raw, feed_dict)
+
+    def vocab_size_dict(self):
+        return { LABEL_KEY: 10 }

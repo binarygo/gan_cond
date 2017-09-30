@@ -3,6 +3,10 @@ import tensorflow as tf
 import util
 
 
+TEST_NOISE_KEY = 'gan_test_noise'
+TEST_LABEL_KEY = 'gan_test_label'
+TEST_DATA_KEY = 'gan_test_data'
+
 # make_generator_fn
 #   (noise, label, is_training) -> data
 #
@@ -37,10 +41,13 @@ def make_gan_model(make_generator_fn,
     # test
     num_params = len(tf.trainable_variables())
     with tf.variable_scope(generator_scope, reuse=True):
-        test_noise = fake_noise.make_placeholder()
-        test_label = fake_label.make_placeholder()
+        test_noise = fake_noise.make_placeholder(
+            collection=TEST_NOISE_KEY)
+        test_label = fake_label.make_placeholder(
+            collection=TEST_LABEL_KEY)
         test_data = make_generator_fn(
             test_noise, test_label, is_training=False)
+        tf.add_to_collection(TEST_DATA_KEY, test_data)
     
     # data_loss_fn = tf.losses.sigmoid_cross_entropy
     data_loss_fn = util.square_error
@@ -48,7 +55,7 @@ def make_gan_model(make_generator_fn,
     generator_losses = [
         data_loss_fn(tf.ones_like(fake_data_logit),
                      fake_data_logit)
-    ] + fake_label.get_linear_output_loss(fake_label_output)
+    ] + fake_label.get_losses(*fake_label_output)
     generator_loss = sum(generator_losses)
     
     discriminator_losses = [
@@ -56,7 +63,7 @@ def make_gan_model(make_generator_fn,
                       real_data_logit) +
          data_loss_fn(tf.zeros_like(fake_data_logit),
                       fake_data_logit))
-    ] + real_label.get_linear_output_loss(real_label_output)
+    ] + real_label.get_losses(*real_label_output)
     discriminator_loss = sum(discriminator_losses)
     
     class Model(object):

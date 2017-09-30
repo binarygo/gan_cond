@@ -34,9 +34,11 @@ class CatVector(object):
         return tf.losses.softmax_cross_entropy(
             self.one_hot, logit)
 
-    def make_placeholder(self):
+    def make_placeholder(self, collection=None):
         sparse_placeholder = tf.placeholder(
             shape=(None,), dtype=self._sparse.dtype)
+        if collection is not None:
+            tf.add_to_collection(collection, sparse_placeholder)
         return CatVector(sparse_placeholder, self._num_classes)
 
     def feed_dict(self, sparse_array):
@@ -80,20 +82,20 @@ class Signal(object):
         return (embed_cont_tensors(self.cont_tensors, cont_dims) +
                 embed_cat_vectors(self.cat_vectors, cat_dims, name))
 
-    def linear_output(self, input):
-        input = tf.contrib.layers.flatten(input)
+    def linear_output(self, cont_input, cat_input):
+        cont_input = tf.contrib.layers.flatten(cont_input)
+        cat_input = tf.contrib.layers.flatten(cat_input)
         cont_means = [
-            util.linear(input, util.get_flatten_dim(cont_tensor))
+            util.linear(cont_input, util.get_flatten_dim(cont_tensor))
             for cont_tensor in self.cont_tensors
         ]
         cat_logits = [
-            util.linear(input, cat_vector.num_classes)
+            util.linear(cat_input, cat_vector.num_classes)
             for cat_vector in self.cat_vectors
         ]
         return cont_means, cat_logits
 
-    def get_linear_output_loss(self, output):
-        cont_means, cat_logits = output
+    def get_losses(self, cont_means, cat_logits):
         return [
             util.square_error(cont_tensor, cont_means)
             for cont_tensor in self.cont_tensors
@@ -102,16 +104,19 @@ class Signal(object):
             for logit, cat_vector in zip(cat_logits, self.cat_vectors)
         ]
 
-    def make_placeholder(self):
+    def make_placeholder(self, collection=None):
+        cont_tensor_placeholders = []
+        for cont_tensor in self.cont_tensors:
+            pl = tf.placeholder(
+                shape=[None] + cont_tensor.get_shape().as_list()[1:],
+                dtype=cont_tensor.dtype)
+            cont_tensor_placeholders.append(pl)
+            if collection is not None:
+                tf.add_to_collection(collection, pl)            
         return Signal(
+            cont_tensor_placeholders,
             [
-                tf.placeholder(
-                    shape=[None] + cont_tensor.get_shape().as_list()[1:],
-                    dtype=cont_tensor.dtype) 
-                for cont_tensor in self.cont_tensors
-            ],
-            [
-                cat_vector.make_placeholder()
+                cat_vector.make_placeholder(collection=collection)
                 for cat_vector in self.cat_vectors
             ])
 
