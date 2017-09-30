@@ -5,8 +5,11 @@ import util
 
 # make_generator_fn
 #   (noise, label, is_training) -> data
+#
 # make_discriminator_fn
 #   (data, noise, label, is_training) -> data_logit, label_logits
+#
+# where noise, label must be gan_util.Signal.
 def make_gan_model(make_generator_fn,
                    make_discriminator_fn,
                    fake_noise,
@@ -46,7 +49,7 @@ def make_gan_model(make_generator_fn,
         data_loss_fn(tf.ones_like(fake_data_logit),
                      fake_data_logit)
     ] + fake_label.get_linear_output_loss(fake_label_output)
-    generator_total_loss = sum(generator_losses)
+    generator_loss = sum(generator_losses)
     
     discriminator_losses = [
         (data_loss_fn(tf.ones_like(real_data_logit),
@@ -54,29 +57,31 @@ def make_gan_model(make_generator_fn,
          data_loss_fn(tf.zeros_like(fake_data_logit),
                       fake_data_logit))
     ] + real_label.get_linear_output_loss(real_label_output)
-    discriminator_total_loss = sum(discriminator_losses)
+    discriminator_loss = sum(discriminator_losses)
     
     class Model(object):
         
-        def train_ops(self, generator_optimizer, discriminator_optimizer):
+        def train_ops(self, generator_optimizer, discriminator_optimizer,
+                      global_step=None):
             return (
                 generator_optimizer.minimize(
-                    loss=self.generator_total_loss,
+                    loss=self.generator_loss,
                     var_list=self.generator_variables),
                 discriminator_optimizer.minimize(
-                    loss=self.discriminator_total_loss,
-                    var_list=self.discriminator_variables))
+                    loss=self.discriminator_loss,
+                    var_list=self.discriminator_variables,
+                    global_step=global_step))
 
     model = Model()
     model.make_generator_fn = make_generator_fn
     model.generator_losses = generator_losses
-    model.generator_total_loss = generator_total_loss
+    model.generator_loss = generator_loss
     model.generator_scope = generator_scope
     model.generator_variables = generator_variables
 
     model.make_discriminator_fn = make_discriminator_fn
     model.discriminator_losses = discriminator_losses
-    model.discriminator_total_loss = discriminator_total_loss
+    model.discriminator_loss = discriminator_loss
     model.discriminator_scope = discriminator_scope
     model.discriminator_variables = discriminator_variables
 
