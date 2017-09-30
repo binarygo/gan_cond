@@ -7,6 +7,7 @@ import util
 class CatVector(object):
     
     def __init__(self, sparse, num_classes):
+        assert num_classes >= 2
         self._sparse = tf.reshape(sparse, (-1,))
         self._num_classes = num_classes
 
@@ -30,7 +31,14 @@ class CatVector(object):
         return tf.nn.embedding_lookup(
             embeddings, self._sparse)
 
+    def linear_output(self, input):
+        if self._num_classes == 2:
+            return util.linear(input, 1)
+        return util.linear(input, self._num_classes)
+
     def get_cross_entropy_loss(self, logit):
+        if self._num_classes == 2:
+            return tf.losses.sigmoid_cross_entropy(self._sparse, logit)
         return tf.losses.softmax_cross_entropy(
             self.one_hot, logit)
 
@@ -82,16 +90,15 @@ class Signal(object):
         return (embed_cont_tensors(self.cont_tensors, cont_dims) +
                 embed_cat_vectors(self.cat_vectors, cat_dims, name))
 
-    def linear_output(self, cont_input, cat_input):
-        cont_input = tf.contrib.layers.flatten(cont_input)
-        cat_input = tf.contrib.layers.flatten(cat_input)
+    def linear_output(self, cont_inputs, cat_inputs):
         cont_means = [
-            util.linear(cont_input, util.get_flatten_dim(cont_tensor))
-            for cont_tensor in self.cont_tensors
+            util.linear(tf.contrib.layers.flatten(cont_input),
+                        util.get_flatten_dim(cont_tensor))
+            for cont_tensor, cont_input in zip(self.cont_tensors, cont_inputs)
         ]
         cat_logits = [
-            util.linear(cat_input, cat_vector.num_classes)
-            for cat_vector in self.cat_vectors
+            cat_vector.linear_output(tf.contrib.layers.flatten(cat_input))
+            for cat_vector, cat_input in zip(self.cat_vectors, cat_inputs)
         ]
         return cont_means, cat_logits
 

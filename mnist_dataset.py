@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.datasets import mnist
@@ -11,9 +12,12 @@ LABEL_KEY = 'label'
 
 class Dataset(dataset_util.DatasetBase):
     
-    def __init__(self, images_path, labels_path):
+    def __init__(self, mnist_dir):
+        images_path = os.path.join(mnist_dir, 'train-images-idx3-ubyte.gz')
         with open(images_path) as f:
             images = mnist.extract_images(f).astype(np.float32) / 255.0
+
+        labels_path = os.path.join(mnist_dir, 'train-labels-idx1-ubyte.gz')
         with open(labels_path) as f:
             labels = mnist.extract_labels(f).astype(np.int32)
         
@@ -39,5 +43,4 @@ class Dataset(dataset_util.DatasetBase):
             })
         super(Dataset, self).__init__(raw, feed_dict)
 
-    def vocab_size_dict(self):
-        return { LABEL_KEY: 10 }
+        self.vocab_size_dict = { LABEL_KEY: 10 }

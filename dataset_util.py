@@ -43,6 +43,9 @@ class CatDataset(DatasetBase):
     
     def __init__(self, data):
         data = np.asarray(data)
+        cat_keys = sorted(list(set(data)))
+        mapping = dict(zip(cat_keys, range(len(cat_keys))))
+        data = np.asarray([mapping[x] for x in data], dtype=np.int32)
         data_placeholder = tf.placeholder(
             dtype=data.dtype, shape=len(data))
         raw = tf.contrib.data.Dataset.from_tensor_slices(
@@ -51,10 +54,11 @@ class CatDataset(DatasetBase):
             data_placeholder: data
         }
         super(CatDataset, self).__init__(raw, feed_dict)
-        self.vocab_size = len(set(data))
+        self.mapping = mapping
+        self.vocab_size = len(mapping)
         
         
-class CombinedDataset(DatasetBase):
+class DatasetArray(DatasetBase):
     
     def __init__(self, datasets):
         raw_datasets = []
@@ -63,9 +67,29 @@ class CombinedDataset(DatasetBase):
             raw_datasets.append(dataset.raw)
             feed_dict.update(dataset.feed_dict)
         raw = tf.contrib.data.Dataset.zip(tuple(raw_datasets))
-        super(CombinedDataset, self).__init__(raw, feed_dict)
+        super(DatasetArray, self).__init__(raw, feed_dict)
         self.datasets = datasets
+
+
+class DatasetDict(DatasetBase):
+    
+    def __init__(self, dataset_dict):
+        raw_dataset_dict = {}
+        feed_dict = {}
+        for name, dataset in dataset_dict.iteritems():
+            raw_dataset_dict[name] = dataset.raw
+            feed_dict.update(dataset.feed_dict)
+        raw = tf.contrib.data.Dataset.zip(raw_dataset_dict)
+        super(DatasetDict, self).__init__(raw, feed_dict)
+        self.dataset_dict = dataset_dict
         
+
+def combine_feed_dicts(datasets):
+    feed_dict = {}
+    for dataset in datasets:
+        feed_dict.update(dataset.feed_dict)
+    return feed_dict
+
 
 def read_image(image_dir, image_file_dataset):
     def map_fn(image_file):
@@ -89,7 +113,7 @@ def crop_and_resize_image(image_dataset,
             image, a, a) 
         return tf.image.resize_images(
             image, size=[target_a, target_a])
-    dataset = CombinedDataset([
+    dataset = DatasetArray([
         image_dataset, y_dataset, x_dataset,
         h_dataset, w_dataset])
     return DatasetBase(dataset.raw.map(map_fn), dataset.feed_dict)
