@@ -14,7 +14,7 @@ ATTR_KEY_PREFIX = 'attr.'
 
 class Dataset(dataset_util.DatasetBase):
 
-    def __init__(self, celeba_dir, image_size):
+    def __init__(self, celeba_dir, image_size=None):
         celeba_annot_dir = os.path.join(celeba_dir, 'Anno')
         celeba_image_dir = os.path.join(celeba_dir, 'Img/img_celeba')
 
@@ -58,9 +58,12 @@ class Dataset(dataset_util.DatasetBase):
         h_dataset = dataset_util.NumDataset(bbox_df['height'])
         w_dataset = dataset_util.NumDataset(bbox_df['width'])
 
-        image_dataset = dataset_util.crop_and_resize_image(
-            dataset_util.read_image(celeba_image_dir, image_id_dataset),
-            y_dataset, x_dataset, h_dataset, w_dataset, image_size)
+        image_dataset = dataset_util.read_image(
+            celeba_image_dir, image_id_dataset)
+        if image_size is not None:
+            image_dataset = dataset_util.crop_and_resize_image(
+                image_dataset, y_dataset, x_dataset, h_dataset, w_dataset,
+                image_size)
 
         feed_dict = dataset_util.combine_feed_dicts([
             image_id_dataset, image_dataset
