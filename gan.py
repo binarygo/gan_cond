@@ -7,6 +7,26 @@ TEST_NOISE_KEY = 'gan_test_noise'
 TEST_LABEL_KEY = 'gan_test_label'
 TEST_DATA_KEY = 'gan_test_data'
 
+
+class _Model(object):
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+
+    def train_ops(self, generator_optimizer, discriminator_optimizer,
+                  global_step=None):
+        return (
+            generator_optimizer.minimize(
+                loss=self.generator_loss,
+                var_list=self.generator_variables),
+            discriminator_optimizer.minimize(
+                loss=self.discriminator_loss,
+                var_list=self.discriminator_variables,
+                global_step=global_step))        
+
+
 # make_generator_fn
 #   (noise, label, is_training) -> data
 #
@@ -66,34 +86,19 @@ def make_gan_model(make_generator_fn,
     ] + real_label.get_losses(*real_label_output)
     discriminator_loss = sum(discriminator_losses)
     
-    class Model(object):
-        
-        def train_ops(self, generator_optimizer, discriminator_optimizer,
-                      global_step=None):
-            return (
-                generator_optimizer.minimize(
-                    loss=self.generator_loss,
-                    var_list=self.generator_variables),
-                discriminator_optimizer.minimize(
-                    loss=self.discriminator_loss,
-                    var_list=self.discriminator_variables,
-                    global_step=global_step))
-
-    model = Model()
-    model.make_generator_fn = make_generator_fn
-    model.generator_losses = generator_losses
-    model.generator_loss = generator_loss
-    model.generator_scope = generator_scope
-    model.generator_variables = generator_variables
-
-    model.make_discriminator_fn = make_discriminator_fn
-    model.discriminator_losses = discriminator_losses
-    model.discriminator_loss = discriminator_loss
-    model.discriminator_scope = discriminator_scope
-    model.discriminator_variables = discriminator_variables
-
-    model.test_noise = test_noise
-    model.test_data = test_data
-    model.test_label = test_label
-
-    return model
+    return _Model(
+        make_generator_fn=make_generator_fn,
+        generator_losses=generator_losses,
+        generator_loss=generator_loss,
+        generator_scope=generator_scope,
+        generator_variables=generator_variables,
+        #
+        make_discriminator_fn=make_discriminator_fn,
+        discriminator_losses=discriminator_losses,
+        discriminator_loss=discriminator_loss,
+        discriminator_scope=discriminator_scope,
+        discriminator_variables=discriminator_variables,
+        #
+        test_noise=test_noise,
+        test_data=test_data,
+        test_label=test_label)

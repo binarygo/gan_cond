@@ -71,12 +71,15 @@ class Dataset(dataset_util.DatasetBase):
             IMAGE_KEY: image_dataset.raw
         }
         vocab_size_dict = {}
-        for col, attr_dataset in attr_dataset_dict.iteritems():
-            key = ATTR_KEY_PREFIX + col
-            raw_dataset_dict[key] = attr_dataset.raw
+        attr_keys = []
+        for col in sorted(attr_dataset_dict.keys()):
+            key = ATTR_KEY_PREFIX + col            
+            raw_dataset_dict[key] = attr_dataset_dict[col].raw
             vocab_size_dict[key] = 2
+            attr_keys.append(key)
         raw = tf.contrib.data.Dataset.zip(raw_dataset_dict)
 
         super(Dataset, self).__init__(raw, feed_dict)
 
         self.vocab_size_dict = vocab_size_dict
+        self.attr_keys = attr_keys
