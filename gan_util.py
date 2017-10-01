@@ -38,7 +38,8 @@ class CatVector(object):
 
     def get_cross_entropy_loss(self, logit):
         if self._num_classes == 2:
-            return tf.losses.sigmoid_cross_entropy(self._sparse, logit)
+            return tf.losses.sigmoid_cross_entropy(
+                tf.reshape(self._sparse, [-1, 1]), logit)
         return tf.losses.softmax_cross_entropy(
             self.one_hot, logit)
 

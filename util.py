@@ -21,6 +21,12 @@ def square_error(labels, predictions):
                   tf.contrib.layers.flatten(labels)), axis=1))
 
 
+def leaky_relu(x, alpha=0.01):
+    pos_x = tf.nn.relu(x)
+    neg_x = tf.nn.relu(-x)
+    return pos_x - neg_x * alpha
+
+
 class TensorflowQueues(object):
 
     def __init__(self, sess):

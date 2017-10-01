@@ -51,7 +51,7 @@ class Dataset(dataset_util.DatasetBase):
             for col in attr_df.columns
         ])
 
-        image_id_dataset = dataset_util.CatDataset(attr_df.index)
+        image_id_dataset = dataset_util.NumDataset(attr_df.index)
     
         y_dataset = dataset_util.NumDataset(bbox_df['y_1'])
         x_dataset = dataset_util.NumDataset(bbox_df['x_1'])
