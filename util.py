@@ -2,6 +2,13 @@ import numpy as np
 import tensorflow as tf
 
 
+def maybe_expand_list(a_list, expected_len):
+    if len(a_list) == expected_len:
+        return a_list
+    elif len(a_list) == 1:
+        return [a_list[0]] * expected_len
+
+
 def set_first_dim(tensor, dim):
     return tf.reshape(tensor, [dim] + tensor.get_shape().as_list()[1:])
 
@@ -25,6 +32,10 @@ def leaky_relu(x, alpha=0.01):
     pos_x = tf.nn.relu(x)
     neg_x = tf.nn.relu(-x)
     return pos_x - neg_x * alpha
+
+
+def make_leaky_relu(alpha=0.01):
+    return lambda x: leaky_relu(x, alpha)
 
 
 class TensorflowQueues(object):

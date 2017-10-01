@@ -68,14 +68,14 @@ def make_gan_model(make_generator_fn,
         test_data = make_generator_fn(
             test_noise, test_label, is_training=False)
         tf.add_to_collection(TEST_DATA_KEY, test_data)
-    
+
     # data_loss_fn = tf.losses.sigmoid_cross_entropy
     data_loss_fn = util.square_error
     
     generator_losses = [
         data_loss_fn(tf.ones_like(fake_data_logit),
                      fake_data_logit)
-    ] + fake_label.get_losses(*fake_label_output)
+    ] + fake_label.get_losses(fake_label_output)
     generator_loss = sum(generator_losses)
     
     discriminator_losses = [
@@ -83,7 +83,7 @@ def make_gan_model(make_generator_fn,
                       real_data_logit) +
          data_loss_fn(tf.zeros_like(fake_data_logit),
                       fake_data_logit))
-    ] + real_label.get_losses(*real_label_output)
+    ] + real_label.get_losses(real_label_output)
     discriminator_loss = sum(discriminator_losses)
     
     return _Model(

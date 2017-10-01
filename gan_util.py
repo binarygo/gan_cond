@@ -55,8 +55,8 @@ class CatVector(object):
 
 
 def embed_cont_tensors(cont_tensors, embedding_dims):
-    if np.isscalar(embedding_dims):
-        embedding_dims = [embedding_dims] * len(cont_tensors)    
+    embedding_dims = util.maybe_expand_list(
+        embedding_dims, len(cont_tensors))
     result = []
     for i, (cont_tensor, embedding_dim) in (
             enumerate(zip(cont_tensors, embedding_dims))):
@@ -65,8 +65,8 @@ def embed_cont_tensors(cont_tensors, embedding_dims):
     
 
 def embed_cat_vectors(cat_vectors, embedding_dims, name):
-    if np.isscalar(embedding_dims):
-        embedding_dims = [embedding_dims] * len(cat_vectors)
+    embedding_dims = util.maybe_expand_list(
+        embedding_dims, len(cat_vectors))
     result = []
     for i, (cat_vector, embedding_dim) in (
             enumerate(zip(cat_vectors, embedding_dims))):
@@ -92,6 +92,10 @@ class Signal(object):
                 embed_cat_vectors(self.cat_vectors, cat_dims, name))
 
     def linear_output(self, cont_inputs, cat_inputs):
+        cont_inputs = util.maybe_expand_list(
+            cont_inputs, len(self.cont_tensors))
+        cat_inputs = util.maybe_expand_list(
+            cat_inputs, len(self.cat_vectors))
         cont_means = [
             util.linear(tf.contrib.layers.flatten(cont_input),
                         util.get_flatten_dim(cont_tensor))
@@ -103,7 +107,9 @@ class Signal(object):
         ]
         return cont_means, cat_logits
 
-    def get_losses(self, cont_means, cat_logits):
+
+    def get_losses(self, linear_output_return):
+        cont_means, cat_logits = linear_output_return
         return [
             util.square_error(cont_tensor, cont_means)
             for cont_tensor in self.cont_tensors
