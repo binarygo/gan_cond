@@ -3,10 +3,10 @@ import tensorflow as tf
 
 
 def maybe_expand_list(a_list, expected_len):
-    if len(a_list) == expected_len:
-        return a_list
-    elif len(a_list) == 1:
+    if len(a_list) == 1:
         return [a_list[0]] * expected_len
+    assert len(a_list) == expected_len
+    return a_list
 
 
 def set_first_dim(tensor, dim):

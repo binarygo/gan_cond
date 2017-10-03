@@ -43,11 +43,9 @@ class CatVector(object):
         return tf.losses.softmax_cross_entropy(
             self.one_hot, logit)
 
-    def make_placeholder(self, collection=None):
+    def make_placeholder(self):
         sparse_placeholder = tf.placeholder(
             shape=(None,), dtype=self._sparse.dtype)
-        if collection is not None:
-            tf.add_to_collection(collection, sparse_placeholder)
         return CatVector(sparse_placeholder, self._num_classes)
 
     def feed_dict(self, sparse_array):
@@ -118,19 +116,17 @@ class Signal(object):
             for logit, cat_vector in zip(cat_logits, self.cat_vectors)
         ]
 
-    def make_placeholder(self, collection=None):
+    def make_placeholder(self):
         cont_tensor_placeholders = []
         for cont_tensor in self.cont_tensors:
             pl = tf.placeholder(
                 shape=[None] + cont_tensor.get_shape().as_list()[1:],
                 dtype=cont_tensor.dtype)
             cont_tensor_placeholders.append(pl)
-            if collection is not None:
-                tf.add_to_collection(collection, pl)            
         return Signal(
             cont_tensor_placeholders,
             [
-                cat_vector.make_placeholder(collection=collection)
+                cat_vector.make_placeholder()
                 for cat_vector in self.cat_vectors
             ])
 

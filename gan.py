@@ -3,11 +3,6 @@ import tensorflow as tf
 import util
 
 
-TEST_NOISE_KEY = 'gan_test_noise'
-TEST_LABEL_KEY = 'gan_test_label'
-TEST_DATA_KEY = 'gan_test_data'
-
-
 class _Model(object):
 
     def __init__(self, **kwargs):
@@ -61,13 +56,10 @@ def make_gan_model(make_generator_fn,
     # test
     num_params = len(tf.trainable_variables())
     with tf.variable_scope(generator_scope, reuse=True):
-        test_noise = fake_noise.make_placeholder(
-            collection=TEST_NOISE_KEY)
-        test_label = fake_label.make_placeholder(
-            collection=TEST_LABEL_KEY)
+        test_noise = fake_noise.make_placeholder()
+        test_label = fake_label.make_placeholder()
         test_data = make_generator_fn(
             test_noise, test_label, is_training=False)
-        tf.add_to_collection(TEST_DATA_KEY, test_data)
 
     # data_loss_fn = tf.losses.sigmoid_cross_entropy
     data_loss_fn = util.square_error
