@@ -119,6 +119,15 @@ def crop_and_resize_image(image_dataset,
     return DatasetBase(dataset.raw.map(map_fn), dataset.feed_dict)
 
 
+def rescale_points(y, x, bbox_y, bbox_x, bbox_h, bbox_w):
+    a = np.minimum(bbox_w, bbox_h)
+    pad_y = bbox_h - a
+    pad_x = bbox_w - a
+    ret_y = (y - bbox_y - pad_y / 2.0) / a
+    ret_x = (x - bbox_x - pad_x / 2.0) / a
+    return ret_y, ret_x
+
+
 def repeat_shuffle_batch(dataset, batch_size, buffer_size=None):
     if buffer_size is None:
         buffer_size = 10 * batch_size

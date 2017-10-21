@@ -54,15 +54,14 @@ def make_gan_model(make_generator_fn,
             real_data, fake_noise, real_label, is_training=True)
     
     # test
-    num_params = len(tf.trainable_variables())
     with tf.variable_scope(generator_scope, reuse=True):
         test_noise = fake_noise.make_placeholder()
         test_label = fake_label.make_placeholder()
         test_data = make_generator_fn(
             test_noise, test_label, is_training=False)
 
-    # data_loss_fn = tf.losses.sigmoid_cross_entropy
-    data_loss_fn = util.square_error
+    data_loss_fn = tf.losses.sigmoid_cross_entropy
+    # data_loss_fn = util.square_error
     
     generator_losses = [
         data_loss_fn(tf.ones_like(fake_data_logit),

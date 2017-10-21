@@ -44,3 +44,8 @@ class Dataset(dataset_util.DatasetBase):
         super(Dataset, self).__init__(raw, feed_dict)
 
         self.vocab_size_dict = { LABEL_KEY: 10 }
+
+    def make_iterator(self, batch_size, buffer_size=None):
+        ds = dataset_util.repeat_shuffle_batch(
+            self.raw, batch_size=batch_size, buffer_size=buffer_size)
+        return ds.make_initializable_iterator()
