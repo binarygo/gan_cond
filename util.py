@@ -56,6 +56,23 @@ def get_trainable_variables_in_scope(scope):
     return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope.name)
 
 
+def plot_gray_images(images, figsize=(20, 20)):
+    plt.figure(figsize=figsize)
+    plt.axis('off')
+    plt.imshow(
+        np.concatenate([x[:,:,0] for x in images], axis=1), 
+        cmap='gray')
+    plt.show()
+    
+
+def plot_rgb_images(images, figsize=(20, 20)):
+    plt.figure(figsize=figsize)
+    plt.axis('off')
+    plt.imshow(
+        np.concatenate([x for x in images], axis=1))
+    plt.show()
+
+
 class TensorflowQueues(object):
 
     def __init__(self, sess):
@@ -72,18 +89,21 @@ class TensorflowQueues(object):
         self._coord.join(self._queue_threads)
 
 
-def plot_gray_images(images, figsize=(20, 20)):
-    plt.figure(figsize=figsize)
-    plt.axis('off')
-    plt.imshow(
-        np.concatenate([x[:,:,0] for x in images], axis=1), 
-        cmap='gray')
-    plt.show()
+class InferenceBase(object):
     
+    def __init__(self, train_log):
+        self._graph = tf.Graph()
+        self._sess = tf.Session(graph=self._graph)
+        with self._graph.as_default():
+            ckpt = tf.train.latest_checkpoint(train_log)
+            saver = tf.train.import_meta_graph(ckpt + '.meta')
+            saver.restore(self._sess, ckpt)
 
-def plot_rgb_images(images, figsize=(20, 20)):
-    plt.figure(figsize=figsize)
-    plt.axis('off')
-    plt.imshow(
-        np.concatenate([x for x in images], axis=1))
-    plt.show()
+    def cleanup(self):
+        self._sess.close()
+            
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.cleanup()
