@@ -43,13 +43,20 @@ def l2_normalize(tensor):
 
 
 def leaky_relu(x, alpha=0.01):
-    pos_x = tf.nn.relu(x)
-    neg_x = tf.nn.relu(-x)
+    pos_x = tf.maximum(0.0, x)
+    neg_x =  tf.minimum(0.0, x)
     return pos_x - neg_x * alpha
 
 
 def make_leaky_relu(alpha=0.01):
     return lambda x: leaky_relu(x, alpha)
+
+
+def parametric_relu(x):
+    alpha = tf.Variable(tf.constant(0.0, shape=x.get_shape()[-1:]))
+    pos_x = tf.maximum(0.0, x)
+    neg_x =  tf.minimum(0.0, x)
+    return pos_x + neg_x * alpha    
 
 
 def get_trainable_variables_in_scope(scope):
@@ -71,6 +78,29 @@ def plot_rgb_images(images, figsize=(20, 20)):
     plt.imshow(
         np.concatenate([x for x in images], axis=1))
     plt.show()
+
+
+def _phase_shift(I, r):
+    bsize, a, b, c = I.get_shape().as_list()
+    bsize = tf.shape(I)[0] # Handling Dimension(None) type for undefined batch dim
+    X = tf.reshape(I, (bsize, a, b, r, r))
+    X = tf.transpose(X, perm=(0, 1, 2, 4, 3))  # bsize, a, b, 1, 1
+    X = tf.split(X, a, axis=1)  # a, [bsize, b, r, r]
+    X = tf.concat([tf.squeeze(x, axis=1) for x in X], axis=2)  # bsize, b, a*r, r
+    X = tf.split(X, b, axis=1)  # b, [bsize, a*r, r]
+    X = tf.concat([tf.squeeze(x, axis=1) for x in X], axis=2)  # bsize, a*r, b*r
+    return tf.reshape(X, (bsize, a*r, b*r, 1))
+
+
+@tf.contrib.framework.add_arg_scope
+def pixel_shuffle_2d(x, r, depth, **kwargs):
+    # x must be (B, H, W, C)
+    # output (B, r*H, r*W, depth)
+    assert len(x.get_shape()) == 4
+    x = tf.contrib.layers.conv2d(
+        inputs=x, num_outputs=depth*r*r, **kwargs)
+    xs = tf.split(x, depth, axis=3)
+    return tf.concat([_phase_shift(y, r) for y in xs], axis=3)
 
 
 class TensorflowQueues(object):
