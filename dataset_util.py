@@ -92,19 +92,39 @@ def combine_feed_dicts(datasets):
 
 
 def read_image(image_dir, image_file_dataset):
+    prefix = ''
+    if image_dir:
+        prefix = image_dir + '/'
     def map_fn(image_file):
-        image = tf.read_file(
-            tf.string_join([image_dir, '/', image_file]))
+        image = tf.read_file(tf.string_join([prefix, image_file]))
         image = tf.image.decode_image(image)
         return tf.cast(image, tf.float32) / 255.0
     return DatasetBase(image_file_dataset.raw.map(map_fn),
                        image_file_dataset.feed_dict)
 
 
+def color_image(image_dataset):
+    def map_fn(image):
+        return tf.slice(tf.tile(image, [1,1,3]), [0,0,0], [-1,-1,3])
+    return DatasetBase(image_dataset.raw.map(map_fn),
+                       image_dataset.feed_dict)
+    
+
+def central_crop_and_resize_image(image_dataset, image_size):
+    def map_fn(image):
+        s = tf.shape(image)
+        h, w = s[0], s[1]
+        a = tf.minimum(h, w)
+        image = tf.image.resize_image_with_crop_or_pad(image, a, a)
+        return tf.image.resize_images(
+            image, size=[image_size, image_size])
+    return DatasetBase(image_dataset.raw.map(map_fn), image_dataset.feed_dict)
+
+
 def crop_and_resize_image(image_dataset,
                           y_dataset, x_dataset,
                           h_dataset, w_dataset,
-                          target_a):
+                          image_size):
     def map_fn(image, y, x, h, w):
         image = tf.image.crop_to_bounding_box(
             image, y, x, h, w)
@@ -112,7 +132,7 @@ def crop_and_resize_image(image_dataset,
         image = tf.image.resize_image_with_crop_or_pad(
             image, a, a) 
         return tf.image.resize_images(
-            image, size=[target_a, target_a])
+            image, size=[image_size, image_size])
     dataset = DatasetArray([
         image_dataset, y_dataset, x_dataset,
         h_dataset, w_dataset])
